@@ -1,1 +1,9 @@
 .vercel
+client/node_modules/
+client/dist/
+node_modules/
+dist/
+.vercel/
+.DS_Store
+.env
+.env.*
