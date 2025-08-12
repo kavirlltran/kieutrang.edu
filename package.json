@@ -1,11 +1,11 @@
 {
-  "name": "speechace-vercel-app",
+  "name": "speechace-txt-root",
   "private": true,
-  "type": "module",
+  "scripts": {
+    "postinstall": "cd client && npm i",
+    "build": "cd client && npm run build"
+  },
   "dependencies": {
     "busboy": "^1.6.0"
-  },
-  "scripts": {
-    "build": "npm --prefix client install && npm --prefix client run build"
   }
 }
