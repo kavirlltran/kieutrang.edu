@@ -1,0 +1,11 @@
+{
+  "name": "speechace-vercel-app",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "busboy": "^1.6.0"
+  },
+  "scripts": {
+    "build": "npm --prefix client install && npm --prefix client run build"
+  }
+}

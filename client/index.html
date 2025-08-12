@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>English Pronunciation & Stress</title>
+    <style>
+      :root{
+        --bg:#0b1220;          /* nền tối */
+        --card:#111827cc;      /* thẻ trong mờ */
+        --muted:#9aa4b2;
+        --line:#ffffff12;
+        --accent:#38bdf8;      /* sky-400 */
+        --accent-2:#22c55e;    /* green-500 */
+        --danger:#f87171;      /* red-400 */
+      }
+
+      /* NỀN & căn giữa toàn trang */
+      html,body{height:100%;}
+      body{
+        margin:0;
+        background:var(--bg);
+        color:#e5e7eb;
+        font-family: ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      }
+
+      /* toàn trang căn giữa nội dung */
+      .page{
+        min-height:100vh;
+        display:flex;         /* căn giữa theo chiều ngang */
+        justify-content:center;
+        align-items:flex-start;  /* vẫn cho cuộn dọc được */
+        padding:32px 16px 64px;
+      }
+
+      /* thẻ chứa app */
+      .card{
+        width:min(92vw, 980px);
+        background:var(--card);
+        border:1px solid var(--line);
+        border-radius:16px;
+        box-shadow: 0 20px 60px #0006, inset 0 1px 0 #ffffff08;
+        padding:28px 22px;
+        backdrop-filter: blur(6px);
+      }
+
+      /* đảm bảo nội dung React nằm TRÊN cùng */
+      #root{ position:relative; z-index:1; }
+
+      .title{
+        text-align:center;
+        font-size:28px;
+        font-weight:700;
+        margin:0 0 14px;
+      }
+      .subtitle{
+        margin:0 auto 16px;
+        max-width:780px;
+        text-align:center;
+        color:var(--muted);
+        font-size:14px;
+      }
+
+      /* hàng chips */
+      .toolbar{
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        flex-wrap:wrap;
+        gap:10px;
+        margin:10px auto 18px;
+      }
+
+      .chip{
+        border:1px solid var(--line);
+        color:#d1d5db;
+        background:#0f172a;
+        padding:8px 14px;
+        border-radius:999px;
+        cursor:pointer;
+        transition:.2s ease;
+        box-shadow: inset 0 0 0 0 transparent;
+      }
+      .chip:hover{
+        border-color:#2a3342;
+        transform: translateY(-1px);
+      }
+      .chip.active{
+        color:white;
+        background: radial-gradient(120% 120% at 30% 20%, #0ea5e950, #22c55e40 60%, #0ea5e920);
+        border-color:#2dd4bf55;
+        box-shadow: 0 0 0 2px #22c55e26, 0 6px 16px #22c55e2b;
+      }
+
+      /* nút thường */
+      .btn{
+        padding:10px 16px;
+        border-radius:10px;
+        border:1px solid var(--line);
+        background:#0f172a;
+        color:#e5e7eb;
+        cursor:pointer;
+        transition:.2s ease;
+      }
+      .btn:hover{ transform: translateY(-1px); border-color:#2a3342; }
+      .btn.primary{ background: linear-gradient( to right, #0ea5e9, #22c55e ); border-color:transparent; color:white; }
+      .btn.primary:hover{ filter:brightness(1.03); }
+
+      /* hàng nút căn giữa */
+      .actions{
+        display:flex; justify-content:center; align-items:center; gap:12px; flex-wrap:wrap;
+        margin: 8px 0 8px;
+      }
+
+      /* Ô NHẬP NỘI DUNG – đẹp hơn & nằm giữa */
+      .text-input{
+        width: min(840px, 100%);
+        display:block;
+        margin: 0 auto 10px;
+        min-height:110px;
+        resize:vertical;
+        font-size:18px;
+        line-height:1.6;
+        color:#e5e7eb;
+        padding:16px 18px;
+        border-radius:14px;
+        border:1px solid var(--line);
+        background:#0b1326;
+        outline:none;
+        transition: box-shadow .2s, border-color .2s;
+        box-shadow: inset 0 1px 0 #ffffff08;
+      }
+      .text-input:focus{
+        border-color:#38bdf8aa;
+        box-shadow: 0 0 0 4px #38bdf81f, 0 10px 30px #0008;
+      }
+
+      /* preview/đồ hoạ/âm thanh */
+      canvas.wave{ width:100%; height:86px; background:#0f172a; border:1px solid var(--line); border-radius:10px; }
+      audio{ width:100%; margin: 6px 0 2px; }
+
+      /* bảng kết quả – vẫn căn giữa thẻ, nhưng text để trái cho dễ đọc */
+      .table-wrap{ width:100%; overflow:auto; }
+      table{ width:100%; border-collapse:collapse; }
+      thead{ background:#0f172a; }
+      th,td{ padding:10px 12px; border-bottom:1px solid var(--line); text-align:left; }
+      tr:hover{ background:#0f172a80; }
+
+      /* nhãn phụ */
+      .muted{ color:var(--muted); font-size:13px; text-align:center; }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="card">
+        <div id="root"></div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
