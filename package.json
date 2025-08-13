@@ -1,11 +1,12 @@
+@'
 {
   "name": "speechace-txt-root",
   "private": true,
   "scripts": {
-    "postinstall": "cd client && npm i",
-    "build": "cd client && npm run build"
+    "build": "npm --prefix client run build"
   },
-  "dependencies": {
-    "busboy": "^1.6.0"
+  "engines": {
+    "node": ">=18"
   }
 }
+'@ | Set-Content -Path .\package.json -Encoding utf8
