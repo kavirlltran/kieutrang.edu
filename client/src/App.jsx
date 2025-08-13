@@ -13,7 +13,7 @@ const CONTENT_FILE = import.meta.env.VITE_CONTENT_FILE || "/contents.txt";
 const WER_MAX = 0.40;
 const JACCARD_MIN = 0.60;
 
-/* ===== Utils (bỏ dấu * và ' trước khi so sánh/chấm) ===== */
+/* ===== Utils (bỏ dấu * và ' trước khi so sánh/chấm/TTS) ===== */
 const stripMarkers = (s) => (s || "").replace(/['*]/g, "");
 const norm = (s) =>
   stripMarkers(s)
@@ -34,16 +34,11 @@ function wordErrorRate(refText, hypText) {
   for (let i = 1; i <= n; i++) {
     for (let j = 1; j <= hyp.length; j++) {
       const cost = ref[i - 1] === hyp[j - 1] ? 0 : 1;
-      dp[i][j] = Math.min(
-        dp[i - 1][j] + 1,
-        dp[i][j - 1] + 1,
-        dp[i - 1][j - 1] + cost
-      );
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
     }
   }
   return dp[n][hyp.length] / n;
 }
-
 function jaccard(aText, bText) {
   const A = new Set(tokenize(aText));
   const B = new Set(tokenize(bText));
@@ -55,6 +50,30 @@ function jaccard(aText, bText) {
 }
 
 const ALL_CHIPS = ["overview", "pron", "stress", "vocab", "phones"];
+
+/* ===== Hiển thị trọng âm từ dấu * (KHÔNG ảnh hưởng TTS) ===== */
+function renderStress(s) {
+  if (!s) return null;
+  const out = [];
+  let i = 0, key = 0;
+  const isLetter = (ch) => /\p{L}/u.test(ch); // Unicode letter
+  while (i < s.length) {
+    if (s[i] === "*") {
+      i++; // bỏ dấu *
+      let j = i;
+      while (j < s.length && isLetter(s[j])) j++;
+      const chunk = s.slice(i, j);
+      out.push(<span className="stress" key={key++}>{chunk}</span>);
+      i = j;
+    } else {
+      let j = i;
+      while (j < s.length && s[j] !== "*") j++;
+      out.push(<span key={key++}>{s.slice(i, j)}</span>);
+      i = j;
+    }
+  }
+  return out;
+}
 
 /* ============== ROBOT 3D SVG ============== */
 function Robot3D({ talking }) {
@@ -171,10 +190,7 @@ export default function App() {
         const resp = await fetch(CONTENT_FILE, { cache: "no-store" });
         if (!resp.ok) throw new Error(`Không đọc được ${CONTENT_FILE}`);
         const raw = await resp.text();
-        const arr = raw
-          .split(/\r?\n/)
-          .map((s) => s.trim())
-          .filter(Boolean);
+        const arr = raw.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
         if (!ignore) {
           setLines(arr);
           setSel(0);
@@ -182,64 +198,38 @@ export default function App() {
         }
       } catch (e) {
         console.error(e);
-        if (!ignore)
-          alert(
-            "Không thể đọc file nội dung.\nTạo 'client/public/contents.txt' (mỗi dòng 1 câu)."
-          );
+        if (!ignore) alert("Không thể đọc file nội dung.\nTạo 'client/public/contents.txt' (mỗi dòng 1 câu).");
       }
     })();
-    return () => {
-      ignore = true;
-    };
+    return () => { ignore = true; };
   }, []);
 
   // --- Speech Synthesis (US/UK) ---
   function getVoice(langPrefix = "en-US") {
     const list = window.speechSynthesis?.getVoices?.() || [];
-    return (
-      list.find((v) => v.lang === langPrefix) ||
-      list.find((v) => v.lang?.startsWith(langPrefix.split("-")[0])) ||
-      list[0]
-    );
+    return list.find((v) => v.lang === langPrefix)
+        || list.find((v) => v.lang?.startsWith(langPrefix.split("-")[0]))
+        || list[0];
   }
-
   function speakSample(accent = "us") {
-    if (!window.speechSynthesis) {
-      alert("Trình duyệt không hỗ trợ Speech Synthesis.");
-      return;
-    }
+    if (!window.speechSynthesis) { alert("Trình duyệt không hỗ trợ Speech Synthesis."); return; }
     const t = (text || "").trim();
-    if (!t) {
-      alert("Chọn nội dung trước khi nghe mẫu.");
-      return;
-    }
-    const u = new SpeechSynthesisUtterance(stripMarkers(t));
+    if (!t) { alert("Chọn nội dung trước khi nghe mẫu."); return; }
+    const u = new SpeechSynthesisUtterance(stripMarkers(t)); // <<< bỏ dấu * & ' trước khi đọc
     const lang = accent === "uk" ? "en-GB" : "en-US";
-    u.lang = lang;
-    u.voice = getVoice(lang);
-    u.rate = 0.95;
-    u.pitch = 1.0;
+    u.lang = lang; u.voice = getVoice(lang); u.rate = 0.95; u.pitch = 1.0;
     u.onstart = () => setRobotTalking(true);
     u.onend = () => setRobotTalking(false);
     u.onpause = () => setRobotTalking(false);
     u.onresume = () => setRobotTalking(true);
-    try {
-      window.speechSynthesis.cancel();
-    } catch {}
+    try { window.speechSynthesis.cancel(); } catch {}
     window.speechSynthesis.speak(u);
   }
-
   useEffect(() => {
     if (!window.speechSynthesis) return;
     const ensure = () => window.speechSynthesis.getVoices();
-    ensure();
-    window.speechSynthesis.onvoiceschanged = ensure;
-    return () => {
-      try {
-        window.speechSynthesis.cancel();
-      } catch {}
-      setRobotTalking(false);
-    };
+    ensure(); window.speechSynthesis.onvoiceschanged = ensure;
+    return () => { try { window.speechSynthesis.cancel(); } catch {}; setRobotTalking(false); };
   }, []);
 
   // --- ASR ---
@@ -248,87 +238,48 @@ export default function App() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return;
     const r = new SR();
-    r.lang = "en-US";
-    r.interimResults = true;
-    r.continuous = true;
+    r.lang = "en-US"; r.interimResults = true; r.continuous = true;
     r.onresult = (e) => {
-      let interim = "",
-        finals = "";
+      let interim = "", finals = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const res = e.results[i];
         if (res.isFinal) finals += " " + res[0].transcript;
         else interim += res[0].transcript + " ";
       }
       setAsrTranscript(interim);
-      if (finals.trim())
-        setAsrFinal((prev) => (prev + " " + finals).trim());
+      if (finals.trim()) setAsrFinal((prev) => (prev + " " + finals).trim());
     };
     r.onerror = (err) => console.warn("ASR error:", err);
-    r.onend = () => {
-      try {
-        if (recording && asrEnabled) r.start();
-      } catch {}
-    };
+    r.onend = () => { try { if (recording && asrEnabled) r.start(); } catch {} };
     recognizerRef.current = r;
-    try {
-      r.start();
-    } catch {}
+    try { r.start(); } catch {}
   }
-  function stopASR() {
-    if (recognizerRef.current) {
-      try {
-        recognizerRef.current.stop();
-      } catch {}
-      recognizerRef.current = null;
-    }
-  }
+  function stopASR() { if (recognizerRef.current) { try { recognizerRef.current.stop(); } catch {}; recognizerRef.current = null; } }
 
   // --- Record ---
   const startRecording = async () => {
-    if (!text.trim())
-      return alert("Hãy chọn nội dung trước khi ghi âm.");
+    if (!text.trim()) return alert("Hãy chọn nội dung trước khi ghi âm.");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : "audio/webm";
+      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm";
       const rec = new MediaRecorder(stream, { mimeType: mime });
       chunksRef.current = [];
-      rec.ondataavailable = (e) =>
-        e.data && e.data.size && chunksRef.current.push(e.data);
+      rec.ondataavailable = (e) => e.data && e.data.size && chunksRef.current.push(e.data);
       rec.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-        setSize(blob.size);
-        setAudioUrl(URL.createObjectURL(blob));
-        stream.getTracks().forEach((t) => t.stop());
-        stopASR();
+        setSize(blob.size); setAudioUrl(URL.createObjectURL(blob));
+        stream.getTracks().forEach((t) => t.stop()); stopASR();
       };
       mediaRef.current = rec;
-      setResult(null);
-      setAsrTranscript("");
-      setAsrFinal("");
-      rec.start();
-      setRecording(true);
-      startASR();
-    } catch (e) {
-      console.error(e);
-      alert("Không thể truy cập micro. Vui lòng cấp quyền.");
-    }
+      setResult(null); setAsrTranscript(""); setAsrFinal("");
+      rec.start(); setRecording(true); startASR();
+    } catch (e) { console.error(e); alert("Không thể truy cập micro. Vui lòng cấp quyền."); }
   };
-
-  const stopRecording = () => {
-    mediaRef.current?.stop();
-    setRecording(false);
-  };
-
+  const stopRecording = () => { mediaRef.current?.stop(); setRecording(false); };
   const onPickFile = (e) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    setAudioUrl(URL.createObjectURL(f));
-    setSize(f.size);
-    setResult(null);
-    setAsrTranscript("");
-    setAsrFinal("");
+    const f = e.target.files?.[0]; if (!f) return;
+    setAudioUrl(URL.createObjectURL(f)); setSize(f.size);
+    setResult(null); setAsrTranscript(""); setAsrFinal("");
   };
 
   // --- Gate ---
@@ -343,34 +294,20 @@ export default function App() {
   }
 
   // --- Submit ---
-  async function getBlob() {
-    if (!audioUrl) return null;
-    const r = await fetch(audioUrl);
-    return await r.blob();
-  }
-
+  async function getBlob() { if (!audioUrl) return null; const r = await fetch(audioUrl); return await r.blob(); }
   const submit = async (force = false) => {
     const blob = await getBlob();
     if (!blob) return alert("Hãy ghi âm hoặc chọn file trước.");
     if (!text.trim()) return alert("Chọn nội dung bạn sẽ đọc.");
     const gate = checkContentMatch();
-    if (!force && !gate.ok) {
-      setGateWarn(gate);
-      return;
-    }
+    if (!force && !gate.ok) { setGateWarn(gate); return; }
     const fd = new FormData();
-    fd.append("text", stripMarkers(text)); // bỏ * / ' trước khi gửi
+    fd.append("text", stripMarkers(text)); // <<< gửi text đã bỏ dấu *
     fd.append("audio", blob, "recording.webm");
     const resp = await fetch(`${API_BASE}/api/evaluate`, { method: "POST", body: fd });
     const ct = resp.headers.get("content-type") || "";
-    const payload = ct.includes("application/json")
-      ? await resp.json()
-      : { raw: await resp.text() };
-    if (!resp.ok) {
-      console.error(payload);
-      alert("Lỗi khi gọi /api/evaluate:\n" + JSON.stringify(payload, null, 2));
-      return;
-    }
+    const payload = ct.includes("application/json") ? await resp.json() : { raw: await resp.text() };
+    if (!resp.ok) { console.error(payload); alert("Lỗi khi gọi /api/evaluate:\n" + JSON.stringify(payload, null, 2)); return; }
     setResult({ ...payload, _asrGate: gate });
   };
 
@@ -418,19 +355,15 @@ export default function App() {
           transition: opacity .2s ease, transform .1s ease, outline-color .2s ease;
         }
         .chip.active{ outline:2px solid rgba(41,163,106,.6); }
-        .chip:disabled{
-          opacity:.5; cursor:not-allowed; filter:grayscale(.3);
-        }
-        .chip:focus-visible{
-          outline:2px solid #2aa3ff; outline-offset:2px;
-        }
+        .chip:disabled{ opacity:.5; cursor:not-allowed; filter:grayscale(.3); }
+        .chip:focus-visible{ outline:2px solid #2aa3ff; outline-offset:2px; }
 
         /* === Picker thay cho textarea === */
         .text-picker-wrap{
           position:relative; margin:10px auto 6px;
           background:rgba(var(--panel2-rgb), var(--panel2-a));
           border:1px solid var(--border); border-radius:16px; padding:14px 14px 54px;
-          overflow:hidden; /* tránh lòi khung */
+          overflow:hidden;
         }
         .picker-row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
         .select{
@@ -444,6 +377,18 @@ export default function App() {
           background:#0a1220; line-height:1.55; white-space:pre-wrap; box-sizing:border-box;
           min-height:72px;
         }
+
+        /* Trọng âm (render từ dấu *) */
+        .picked-text .stress{
+          text-decoration: underline;
+          text-decoration-thickness: 3px;
+          text-underline-offset: 3px;
+          color:#ffd166;
+          background:rgba(255,209,102,.10);
+          border-radius:3px;
+          padding:0 1px;
+        }
+
         .sample-voice{position:absolute; left:16px; bottom:16px; display:flex; gap:8px;}
         .robot3d{ position:absolute; right:6px; bottom:8px; width:170px; height:170px; pointer-events:none; }
         @media (max-width: 680px){
@@ -513,27 +458,13 @@ export default function App() {
             </button>
           </div>
 
-          <div className="picked-text">{text || "— Chưa có nội dung —"}</div>
+          <div className="picked-text">
+            {text ? renderStress(text) : "— Chưa có nội dung —"}
+          </div>
 
           <div className="sample-voice">
-            <button
-              type="button"
-              className="chip"
-              title="Nghe mẫu giọng Mỹ (en-US)"
-              onClick={(e) => { e.preventDefault(); speakSample("us"); }}
-              disabled={!canHear}
-            >
-              🔊 US
-            </button>
-            <button
-              type="button"
-              className="chip"
-              title="Nghe mẫu giọng Anh (en-GB)"
-              onClick={(e) => { e.preventDefault(); speakSample("uk"); }}
-              disabled={!canHear}
-            >
-              🔊 UK
-            </button>
+            <button type="button" className="chip" title="Nghe mẫu giọng Mỹ (en-US)" onClick={(e) => { e.preventDefault(); speakSample("us"); }} disabled={!canHear}>🔊 US</button>
+            <button type="button" className="chip" title="Nghe mẫu giọng Anh (en-GB)" onClick={(e) => { e.preventDefault(); speakSample("uk"); }} disabled={!canHear}>🔊 UK</button>
           </div>
 
           <Robot3D talking={robotTalking} />
