@@ -1,6 +1,10 @@
 {
   "version": 2,
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" }
-  ]
+  "framework": "vite",
+  "installCommand": "npm --prefix client ci || npm --prefix client i",
+  "buildCommand": "npm --prefix client run build",
+  "outputDirectory": "client/dist",
+  "env": {
+    "VITE_CONTENT_FILE": "/contents.txt"
+  }
 }
